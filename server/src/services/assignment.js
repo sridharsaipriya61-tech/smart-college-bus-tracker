@@ -16,10 +16,12 @@ export async function assignBus(userId, busId) {
       .from('buses')
       .update({ driver_id: userId, updated_at: new Date().toISOString() })
       .eq('id', busId);
-    // And free any other driver who was pointing at this bus.
+    // Only other *drivers* are displaced — students are passengers and many of
+    // them legitimately share the same bus.
     await supabaseAdmin
       .from('profiles')
       .update({ bus_id: null, updated_at: new Date().toISOString() })
+      .eq('role', 'driver')
       .eq('bus_id', busId)
       .neq('id', userId);
   } else {
