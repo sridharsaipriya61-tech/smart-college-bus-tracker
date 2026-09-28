@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { buildUrl, getToken } from './api.js';
 
 /** GET a JSON endpoint from the API with loading + error state. */
 export function useApi(path, { deps = [], poll = 0, enabled = true } = {}) {
@@ -14,9 +15,20 @@ export function useApi(path, { deps = [], poll = 0, enabled = true } = {}) {
       if (!enabled || !pathRef.current) return;
       if (!silent) setLoading(true);
       try {
-        const res = await fetch(pathRef.current);
-        const json = await res.json();
-        if (!res.ok) throw new Error(json?.error || `Failed (${res.status})`);
+        // buildUrl points at the deployed backend, not the frontend host.
+        const res = await fetch(buildUrl(pathRef.current), {
+          headers: getToken() ? { Authorization: `Bearer ${getToken()}` } : {},
+        });
+        const text = await res.text();
+        let json = null;
+        try {
+          json = text ? JSON.parse(text) : {};
+        } catch {
+          throw new Error(
+            'The server returned a web page instead of data. Please refresh — if this continues the API URL is misconfigured.'
+          );
+        }
+        if (!res.ok) throw new Error(json?.error || `Request failed (${res.status})`);
         if (alive.current) {
           setData(json);
           setError(null);

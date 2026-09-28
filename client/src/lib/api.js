@@ -86,6 +86,13 @@ const qs = (params = {}) => {
   return s ? `?${s}` : '';
 };
 
+/**
+ * Prefix an API path with the configured backend URL.
+ * Every network call in the app must go through this — a bare `/api/...`
+ * would hit the frontend host, whose SPA rewrite replies with index.html.
+ */
+export const buildUrl = (path) => `${BASE}${path}`;
+
 export const api = {
   health: () => request('/api/health', { auth: false }),
 
