@@ -1,0 +1,44 @@
+# Render blueprint — the backend API.
+# Create the service from this repo and Render reads the plan automatically.
+services:
+  - type: web
+    name: smart-college-bus-tracker-api
+    runtime: node
+    plan: free
+    rootDir: server
+    buildCommand: npm install
+    startCommand: npm start
+    healthCheckPath: /health
+    autoDeploy: true
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 8080
+      - key: JWT_SECRET
+        generateValue: true
+      - key: JWT_EXPIRES_IN
+        value: 30d
+      # CLIENT_URL is set to the Vercel URL after the frontend is deployed.
+      - key: CLIENT_URL
+        sync: false
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_ANON_KEY
+        sync: false
+      - key: SUPABASE_SERVICE_ROLE_KEY
+        sync: false
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: SIMULATE_BUSES
+        value: 'true'
+      - key: SIMULATION_INTERVAL_MS
+        value: '5000'
+      - key: ADMIN_EMAIL
+        value: admin@bustracker.dev
+      - key: ADMIN_USERNAME
+        value: admin
+      - key: ADMIN_PASSWORD
+        sync: false
+      - key: ADMIN_NAME
+        value: System Admin
