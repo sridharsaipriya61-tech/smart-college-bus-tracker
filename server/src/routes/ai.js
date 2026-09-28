@@ -52,16 +52,21 @@ async function resolveModels() {
   return list;
 }
 
-async function callOnce({ system, prompt }) {
+async function callOnce({ system, prompt, deadline }) {
   if (!env.geminiApiKey) {
     throw new HttpError(503, 'AI is not configured on the server yet. Add GEMINI_API_KEY to server/.env');
   }
   let lastError;
   for (const model of await resolveModels()) {
+    // Never let a slow model push us past the serverless request budget.
+    const left = deadline - Date.now();
+    if (left < 1500) break;
+    const budget = Math.min(left, 20000);
     try {
       const res = await fetch(ENDPOINT(model), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'x-goog-api-key': env.geminiApiKey },
+        signal: AbortSignal.timeout(budget),
         body: JSON.stringify({
           // The role guidance is inlined into the user turn: some Gemini
           // generations echo a systemInstruction back instead of following it.
@@ -91,6 +96,10 @@ async function callOnce({ system, prompt }) {
       lastError = new HttpError(502, `Gemini error (${res.status}): ${body.slice(0, 200)}`);
     } catch (e) {
       if (e instanceof HttpError && e.status === 429) throw e;
+      if (e.name === 'TimeoutError' || e.name === 'AbortError') {
+        lastError = new HttpError(504, 'Gemini took too long to answer');
+        continue;
+      }
       lastError = e;
     }
   }
@@ -101,14 +110,16 @@ async function callOnce({ system, prompt }) {
   throw new HttpError(502, lastError?.message || 'AI is temporarily unavailable');
 }
 
-/** Google throttles bursts — give the whole model list one more go. */
+/** Google throttles bursts — give the whole model list one more go, in budget. */
 async function callGemini(args) {
+  const deadline = Date.now() + 45000;
   try {
-    return await callOnce(args);
+    return await callOnce({ ...args, deadline });
   } catch (e) {
-    if (![429, 502, 503].includes(e.status)) throw e;
-    await new Promise((r) => setTimeout(r, 1500));
-    return callOnce(args);
+    if (![429, 502, 503, 504].includes(e.status)) throw e;
+    if (deadline - Date.now() < 4000) throw e;
+    await new Promise((r) => setTimeout(r, 1200));
+    return callOnce({ ...args, deadline });
   }
 }
 

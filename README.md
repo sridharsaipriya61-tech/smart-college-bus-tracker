@@ -120,15 +120,34 @@ All protected routes need `Authorization: Bearer <token>`.
 
 ## 🚀 Deploy
 
-**Backend → Render** (root dir `server`, `npm start`, health check `/health`)
-Set `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`, `GEMINI_API_KEY`,
-`JWT_SECRET` and `CLIENT_URL` (your Vercel URL) in the Render dashboard.
+The app is **live**:
 
-**Frontend → Vercel** (root dir `client`, build `npm run build`, output `dist`)
-Set `VITE_API_BASE_URL` to the Render URL. `client/vercel.json` already handles SPA rewrites.
+| | URL |
+| --- | --- |
+| **Frontend** | https://smart-college-bus-tracker.vercel.app |
+| **Backend API** | https://smart-college-bus-tracker-api.vercel.app |
+| **GitHub** | https://github.com/sridharsaipriya61-tech/smart-college-bus-tracker |
 
-**Database** — run `npm run init-db` once locally with your Supabase credentials, or paste
-`server/src/scripts/schema.js` into the Supabase SQL editor.
+### Backend — Vercel (currently live) or Render
+
+The Express app is exported twice from the same code:
+
+- `server/api/index.js` → **serverless function** (Vercel) — no `listen()` call
+- `server/src/index.js` → **long-running server** (Render, local) — calls `listen()`
+
+**Vercel (live):** root directory `server`, no build command, env vars set in the dashboard.
+**Render (optional):** the repo contains `render.yaml`, a ready-to-use blueprint —
+Project Settings → Database are not needed; just set `SUPABASE_URL`, `SUPABASE_ANON_KEY`,
+`SUPABASE_SERVICE_ROLE_KEY`, `GEMINI_API_KEY`, `JWT_SECRET` and `CLIENT_URL` (your Vercel URL).
+Deploying to Render later only means changing `VITE_API_BASE_URL` on the frontend.
+
+**Frontend — Vercel:** root directory `client`, build `npm run build`, output `dist`.
+The only variable is `VITE_API_BASE_URL` = the backend URL. `client/vercel.json` handles SPA rewrites.
+
+> On a serverless host there is no background timer, so the demo bus movement is triggered
+> by incoming map requests instead (`server/src/app.js`). Real driver GPS is unaffected.
+
+**Database** — `npm run init-db` creates every table, the RLS policies and the demo data.
 
 ---
 
